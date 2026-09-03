@@ -42,7 +42,7 @@ jobs:
           path: |
             ~/Library/Caches/org.swift.swiftpm
             DerivedData/SourcePackages
-          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
           restore-keys: spm-${{ runner.os }}-
 
       - name: Cache build products

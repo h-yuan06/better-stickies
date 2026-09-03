@@ -25,6 +25,7 @@ BUILD_ARGS=(
   -clonedSourcePackagesDirPath "$DERIVED_DATA/SourcePackages"
   -skipPackagePluginValidation
   -skipMacroValidation
+  -onlyUsePackageVersionsFromResolvedFile
   ARCHS="$ARCHS"
   ONLY_ACTIVE_ARCH=NO
   COMPILER_INDEX_STORE_ENABLE=NO

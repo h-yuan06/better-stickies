@@ -47,6 +47,16 @@ open BetterStickies.xcodeproj
 and generates the Xcode project from `project.yml`. The `.xcodeproj` is **not**
 committed — `project.yml` is the single source of truth, so it can never drift.
 
+Dependency versions are pinned in `Package.resolved` at the repo root, rather than
+inside the generated `.xcodeproj` where Xcode normally keeps it. `bootstrap.sh` copies
+it into place, and every build runs with resolution disabled, so a dependency cannot
+move underneath you without the pin file changing in a reviewable commit. To move a
+pin deliberately:
+
+```
+Scripts/update-dependencies.sh
+```
+
 To produce a signed, zipped build:
 
 ```

@@ -32,4 +32,15 @@ fi
 
 echo "==> Generating Xcode project"
 "$TOOLS/xcodegen/bin/xcodegen" generate --quiet
+
+# Dependency versions are pinned at the repo root because the .xcodeproj that
+# normally holds Package.resolved is generated, not committed. Seeding it here lets
+# builds run with resolution disabled, so a dependency can never move underneath us
+# without the pin file changing in a reviewable commit.
+if [[ -f Package.resolved ]]; then
+  PIN_DIR="BetterStickies.xcodeproj/project.xcworkspace/xcshareddata/swiftpm"
+  mkdir -p "$PIN_DIR"
+  cp Package.resolved "$PIN_DIR/Package.resolved"
+fi
+
 echo "Ready."
