@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          # macOS 26 images ship several Xcode 26.x versions; take the newest rather
+          # than pinning a path that disappears when the image is updated.
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then
+            echo "No Xcode 26.x found; falling back to the image default." >&2
+            XCODE=$(dirname "$(dirname "$(xcode-select -p)")")
+          fi
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+
+      - name: Cache pinned tools
+        uses: actions/cache@v4
+        with:
+          path: .tools
+          key: tools-${{ runner.os }}-${{ hashFiles('Scripts/bootstrap.sh') }}
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            DerivedData/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Cache build products
+        uses: actions/cache@v4
+        with:
+          path: DerivedData/Build
+          # Restore keys let an unrelated source change still reuse most objects
+          # instead of forcing a cold build.
+          key: build-${{ runner.os }}-${{ hashFiles('Sources/**/*.swift', 'Tests/**/*.swift', 'project.yml') }}
+          restore-keys: |
+            build-${{ runner.os }}-
+
+      - name: Bootstrap
+        run: Scripts/bootstrap.sh
+
+      - name: Build and test
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project BetterStickies.xcodeproj \
+            -scheme BetterStickies \
+            -configuration Debug \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath DerivedData/SourcePackages \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            -onlyUsePackageVersionsFromResolvedFile \
+            ONLY_ACTIVE_ARCH=YES \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            test
+
+      - name: Verify the app can be signed and launched
+        run: |
+          # The release path is ad-hoc signed and unnotarized; catching a signing or
+          # library-validation regression here is far cheaper than at tag time.
+          APP="DerivedData/Build/Products/Debug/Better Stickies.app"
+          Scripts/adhoc-sign.sh "$APP" Sources/App/BetterStickies.entitlements

@@ -1,0 +1,146 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build, e.g. 0.2.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building $VERSION"
+
+      - name: Select Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then
+            XCODE=$(dirname "$(dirname "$(xcode-select -p)")")
+          fi
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+
+      - name: Cache pinned tools
+        uses: actions/cache@v4
+        with:
+          path: .tools
+          key: tools-${{ runner.os }}-${{ hashFiles('Scripts/bootstrap.sh') }}
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            DerivedData/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Build, sign and package
+        env:
+          # Baked into Info.plist so shipped builds can verify their own updates.
+          SPARKLE_PUBLIC_KEY: ${{ secrets.SPARKLE_PUBLIC_KEY }}
+          BUILD_NUMBER: ${{ github.run_number }}
+          DERIVED_DATA: ${{ github.workspace }}/DerivedData
+        run: |
+          # Universal only for releases: building both architectures roughly doubles
+          # compile time and there is no reason to pay it on every push.
+          ARCHS="arm64 x86_64" Scripts/package.sh "${{ steps.version.outputs.version }}"
+
+      - name: Confirm the packaged app is a universal binary
+        run: |
+          lipo -archs "dist/Better Stickies.app/Contents/MacOS/Better Stickies"
+          lipo -archs "dist/Better Stickies.app/Contents/MacOS/Better Stickies" | grep -q arm64
+          lipo -archs "dist/Better Stickies.app/Contents/MacOS/Better Stickies" | grep -q x86_64
+
+      - name: Sign the archive for Sparkle
+        id: sign
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "::error::SPARKLE_PRIVATE_KEY is not set; the release would ship unverifiable updates."
+            exit 1
+          fi
+          ZIP="dist/BetterStickies-${{ steps.version.outputs.version }}.zip"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > /tmp/sparkle_key
+          OUTPUT=$(.tools/sparkle/bin/sign_update "$ZIP" -f /tmp/sparkle_key)
+          rm -f /tmp/sparkle_key
+          echo "$OUTPUT"
+          SIGNATURE=$(echo "$OUTPUT" | sed -n 's/.*edSignature="\([^"]*\)".*/\1/p')
+          LENGTH=$(echo "$OUTPUT" | sed -n 's/.*length="\([^"]*\)".*/\1/p')
+          [ -n "$SIGNATURE" ] || { echo "::error::sign_update produced no signature"; exit 1; }
+          echo "signature=$SIGNATURE" >> "$GITHUB_OUTPUT"
+          echo "length=$LENGTH" >> "$GITHUB_OUTPUT"
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # Notes live in a file: a heredoc inside a YAML block keeps its indentation,
+          # which would render the whole thing as a code block on the release page.
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release upload "v$VERSION" "${{ steps.sign.outputs.zip }}" --clobber
+          else
+            gh release create "v$VERSION" "${{ steps.sign.outputs.zip }}" \
+              --title "Better Stickies $VERSION" \
+              --notes-file .github/RELEASE_NOTES.md
+          fi
+
+      - name: Update the appcast on GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ZIP_NAME=$(basename "${{ steps.sign.outputs.zip }}")
+          URL="https://github.com/${{ github.repository }}/releases/download/v$VERSION/$ZIP_NAME"
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # The feed lives on gh-pages so Sparkle has a stable, cacheable URL that is
+          # independent of the release assets themselves.
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git fetch origin gh-pages
+            git worktree add pages origin/gh-pages
+          else
+            git worktree add --detach pages
+            git -C pages checkout --orphan gh-pages
+            git -C pages rm -rf . >/dev/null 2>&1 || true
+          fi
+
+          python3 Scripts/make_appcast.py \
+            --appcast pages/appcast.xml \
+            --version "$VERSION" \
+            --build "${{ github.run_number }}" \
+            --url "$URL" \
+            --length "${{ steps.sign.outputs.length }}" \
+            --signature "${{ steps.sign.outputs.signature }}" \
+            --release-notes-link "https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+
+          cd pages
+          touch .nojekyll
+          git add appcast.xml .nojekyll
+          git commit -m "Publish appcast for $VERSION" || echo "Nothing to publish"
+          git push origin HEAD:gh-pages

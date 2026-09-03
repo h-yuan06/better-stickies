@@ -1,0 +1,125 @@
+name: BetterStickies
+
+options:
+  bundleIdPrefix: com.hansyuan
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+  groupSortPosition: top
+
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    minVersion: 2.9.6
+    maxVersion: 3.0.0
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Swift 6.2 approachable concurrency: the whole app is main-actor by default,
+    # which is correct for an AppKit/SwiftUI app and removes a mountain of annotations.
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    # Ad-hoc signing. There is no Developer ID; integrity comes from Sparkle's EdDSA.
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: NO
+    # Build speed
+    COMPILER_INDEX_STORE_ENABLE: NO
+    SWIFT_COMPILATION_MODE: wholemodule
+    DEAD_CODE_STRIPPING: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+  configs:
+    Debug:
+      SWIFT_COMPILATION_MODE: incremental
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+      GCC_OPTIMIZATION_LEVEL: "0"
+    Release:
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+
+targets:
+  BetterStickies:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+        excludes:
+          - "App/Info.plist"
+    dependencies:
+      - package: Sparkle
+        product: Sparkle
+    entitlements:
+      path: Sources/App/BetterStickies.entitlements
+      properties:
+        # Required so an ad-hoc signature can still load Sparkle.framework.
+        com.apple.security.cs.disable-library-validation: true
+    info:
+      path: Sources/App/Info.plist
+      properties:
+        CFBundleName: Better Stickies
+        CFBundleDisplayName: Better Stickies
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundlePackageType: APPL
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        # Menu-bar-only agent: no Dock icon, no app switcher entry.
+        LSUIElement: true
+        NSHumanReadableCopyright: ""
+        NSSupportsAutomaticTermination: false
+        NSSupportsSuddenTermination: false
+        # Sparkle
+        SUFeedURL: https://h-yuan06.github.io/better-stickies/appcast.xml
+        SUPublicEDKey: REPLACE_WITH_PUBLIC_ED_KEY
+        SUEnableAutomaticChecks: true
+        SUScheduledCheckInterval: 86400
+        SUAllowsAutomaticUpdates: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hansyuan.BetterStickies
+        PRODUCT_NAME: Better Stickies
+        # The bundle is user-visible ("Better Stickies"); the Swift module is not, so
+        # keep it free of the underscore the space would otherwise produce.
+        PRODUCT_MODULE_NAME: BetterStickies
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_PREVIEWS: YES
+        COMBINE_HIDPI_IMAGES: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+
+  BetterStickiesTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/BetterStickiesTests
+    dependencies:
+      - target: BetterStickies
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hansyuan.BetterStickiesTests
+        GENERATE_INFOPLIST_FILE: YES
+        # Derived from the target name by default, which does not match a product
+        # name containing a space.
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Better Stickies.app/Contents/MacOS/Better Stickies"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  BetterStickies:
+    build:
+      targets:
+        BetterStickies: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: false
+      targets:
+        - BetterStickiesTests
+    archive:
+      config: Release
