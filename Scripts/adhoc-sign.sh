@@ -16,6 +16,19 @@ ENTITLEMENTS="${2:-}"
 # detritus not allowed".
 xattr -cr "$APP"
 
+# Any other nested bundle — a unit-test bundle in a Debug build, a login item, an
+# XPC service — must also be sealed before its container.
+for nested in \
+  "$APP"/Contents/PlugIns/* \
+  "$APP"/Contents/XPCServices/* \
+  "$APP"/Contents/Library/LoginItems/* \
+  "$APP"/Contents/MacOS/*.dylib
+do
+  [[ -e "$nested" ]] || continue
+  echo "==> Signing $(basename "$nested")"
+  codesign --force --sign - --timestamp=none "$nested"
+done
+
 FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
 if [[ -d "$FRAMEWORK" ]]; then
   echo "==> Signing Sparkle (inside out)"

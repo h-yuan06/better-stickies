@@ -60,9 +60,11 @@ deliberately outside the repo: on an iCloud-synced folder the file provider stam
 ## Testing
 
 ```
-xcodebuild -project BetterStickies.xcodeproj -scheme BetterStickies \
-  -destination 'platform=macOS,arch=arm64' test
+Scripts/test.sh
 ```
+
+Run it through the script rather than calling `xcodebuild` directly: it puts
+DerivedData outside the repo, which matters for the iCloud reason described above.
 
 The suite covers list editing semantics, numbering across nesting levels, document
 serialization round-trips, storage durability including corrupt-file recovery, and

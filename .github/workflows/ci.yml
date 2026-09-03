@@ -75,9 +75,26 @@ jobs:
             COMPILER_INDEX_STORE_ENABLE=NO \
             test
 
-      - name: Verify the app can be signed and launched
+      - name: Verify the shipping configuration signs cleanly
         run: |
-          # The release path is ad-hoc signed and unnotarized; catching a signing or
+          # Signing is verified against Release, not Debug: a Debug build embeds the
+          # unit-test bundle and preview dylibs that never ship, so signing it proves
+          # nothing about the artifact users download. Catching an ad-hoc signing or
           # library-validation regression here is far cheaper than at tag time.
-          APP="DerivedData/Build/Products/Debug/Better Stickies.app"
-          Scripts/adhoc-sign.sh "$APP" Sources/App/BetterStickies.entitlements
+          set -o pipefail
+          xcodebuild \
+            -project BetterStickies.xcodeproj \
+            -scheme BetterStickies \
+            -configuration Release \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath DerivedData \
+            -clonedSourcePackagesDirPath DerivedData/SourcePackages \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            build
+          Scripts/adhoc-sign.sh \
+            "DerivedData/Build/Products/Release/Better Stickies.app" \
+            Sources/App/BetterStickies.entitlements
