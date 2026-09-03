@@ -34,7 +34,7 @@ private struct AppearanceSettings: View {
                                 settings.defaultTintHex = tint.hex
                             } label: {
                                 Circle()
-                                    .fill(tint.color)
+                                    .fill(tint.swatchColor)
                                     .frame(width: 18, height: 18)
                                     .overlay(
                                         Circle().strokeBorder(
@@ -89,7 +89,7 @@ private struct AppearanceSettings: View {
                     set: { settings.interactiveGlass = $0 }
                 ))
 
-                LabeledContent("Opacity") {
+                LabeledContent("Opacity when focused") {
                     Slider(value: Binding(
                         get: { settings.windowOpacity },
                         set: {
@@ -99,6 +99,20 @@ private struct AppearanceSettings: View {
                     ), in: 0.35...1)
                     .frame(width: 200)
                 }
+
+                LabeledContent("Opacity when idle") {
+                    Slider(value: Binding(
+                        get: { settings.inactiveOpacity },
+                        set: {
+                            settings.inactiveOpacity = $0
+                            environment.windowManager.applySettings()
+                        }
+                    ), in: 0.05...1)
+                    .frame(width: 200)
+                }
+                Text("Notes fade back once you click away, and return when focused.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section {

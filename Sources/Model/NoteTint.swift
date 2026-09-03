@@ -8,8 +8,17 @@ nonisolated struct NoteTint: Codable, Hashable, Sendable, Identifiable {
 
     var id: String { hex }
 
-    var color: Color { Color(hex: hex) ?? .yellow }
+    /// Sentinel for "no colour at all" — plain, colourless glass.
+    static let noneHex = "none"
 
+    var isColorless: Bool { hex == NoteTint.noneHex }
+
+    /// `nil` means tint the glass with nothing, which is not the same as clear white.
+    var color: Color? {
+        isColorless ? nil : Color(hex: hex)
+    }
+
+    static let none = NoteTint(hex: NoteTint.noneHex, name: "None")
     static let yellow = NoteTint(hex: "#FFD60A", name: "Yellow")
     static let peach = NoteTint(hex: "#FF9F0A", name: "Peach")
     static let pink = NoteTint(hex: "#FF375F", name: "Pink")
@@ -19,9 +28,13 @@ nonisolated struct NoteTint: Codable, Hashable, Sendable, Identifiable {
     static let green = NoteTint(hex: "#30D158", name: "Green")
     static let graphite = NoteTint(hex: "#8E8E93", name: "Graphite")
 
+    /// Colourless first: the default is plain glass, with colour as an opt-in.
     static let palette: [NoteTint] = [
-        .yellow, .peach, .pink, .purple, .blue, .teal, .green, .graphite,
+        .none, .yellow, .peach, .pink, .purple, .blue, .teal, .green, .graphite,
     ]
+
+    /// Colour to show in a swatch, since `.none` has no colour of its own.
+    var swatchColor: Color { color ?? Color.white.opacity(0.22) }
 }
 
 nonisolated extension Color {

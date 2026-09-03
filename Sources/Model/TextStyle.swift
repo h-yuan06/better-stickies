@@ -19,7 +19,9 @@ nonisolated struct TextStyle: Equatable, Sendable {
     /// system rather than pinning a font name that may not exist on another Mac.
     static let systemFontSentinel = "__system__"
 
-    var textColor: NSColor { .labelColor }
+    /// Deliberately secondary rather than full-contrast label: on a nearly clear
+    /// glass panel, solid black text reads as pasted on rather than part of it.
+    var textColor: NSColor { .secondaryLabelColor }
     /// Completed checklist items are de-emphasised rather than hidden.
     var completedTextColor: NSColor { .tertiaryLabelColor }
 

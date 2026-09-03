@@ -47,9 +47,9 @@ final class WindowManager {
             settings: settings,
             onClose: { [weak self] closedID in self?.controllers[closedID] = nil }
         )
-        controller.window.alphaValue = settings.windowOpacity
         controllers[id] = controller
         controller.show(makeKey: makeKey)
+        controller.refreshFromSettings()
     }
 
     func close(_ id: UUID) {

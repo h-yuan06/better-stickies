@@ -12,6 +12,8 @@ final class NoteWindowController: NSObject, NSWindowDelegate {
     private let onClose: (UUID) -> Void
     /// Height to restore when un-collapsing.
     private var expandedHeight: CGFloat
+    /// Pointer is inside the note. Reading a faded note should not require clicking it.
+    private var isHovered = false
 
     init(
         note: Note,
@@ -42,7 +44,8 @@ final class NoteWindowController: NSObject, NSWindowDelegate {
                 store: store,
                 settings: settings,
                 onClose: { [weak self] in self?.close() },
-                onToggleCollapse: { [weak self] in self?.toggleCollapse() }
+                onToggleCollapse: { [weak self] in self?.toggleCollapse() },
+                onHoverChange: { [weak self] hovering in self?.setHovered(hovering) }
             )
         )
         // The glass is the only thing that should paint; anything opaque behind it
@@ -72,7 +75,30 @@ final class NoteWindowController: NSObject, NSWindowDelegate {
     func refreshFromSettings() {
         guard let note = store[noteID] else { return }
         window.applyLevel(settings.floatLevel, pinned: note.isPinned)
-        window.alphaValue = settings.windowOpacity
+        applyFocusOpacity(animated: false)
+    }
+
+    /// Notes recede when they are not being used: a focused note is fully present,
+    /// an unfocused one fades back to a suggestion so a screen full of them does not
+    /// compete with the work behind them.
+    func setHovered(_ hovering: Bool) {
+        guard isHovered != hovering else { return }
+        isHovered = hovering
+        applyFocusOpacity(animated: true)
+    }
+
+    private func applyFocusOpacity(animated: Bool) {
+        let isEngaged = window.isKeyWindow || isHovered
+        let target = isEngaged ? settings.windowOpacity : settings.inactiveOpacity
+        guard animated else {
+            window.alphaValue = target
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.22
+            context.allowsImplicitAnimation = true
+            window.animator().alphaValue = target
+        }
     }
 
     func toggleCollapse() {
@@ -113,6 +139,11 @@ final class NoteWindowController: NSObject, NSWindowDelegate {
     func windowDidBecomeKey(_ notification: Notification) {
         // Bring the note fully forward without activating the app.
         window.orderFrontRegardless()
+        applyFocusOpacity(animated: true)
+    }
+
+    func windowDidResignKey(_ notification: Notification) {
+        applyFocusOpacity(animated: true)
     }
 
     private func persistFrame() {

@@ -54,6 +54,8 @@ final class AppSettings {
     var glassStyle: GlassStyle { didSet { write(glassStyle.rawValue, .glassStyle) } }
     var interactiveGlass: Bool { didSet { write(interactiveGlass, .interactiveGlass) } }
     var windowOpacity: Double { didSet { write(windowOpacity, .windowOpacity) } }
+    /// Opacity once a note loses focus. Notes are meant to recede until wanted.
+    var inactiveOpacity: Double { didSet { write(inactiveOpacity, .inactiveOpacity) } }
     var floatLevel: FloatLevel { didSet { write(floatLevel.rawValue, .floatLevel) } }
     var fontName: String { didSet { write(fontName, .fontName) } }
     var fontSize: Double { didSet { write(fontSize, .fontSize) } }
@@ -64,11 +66,12 @@ final class AppSettings {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        defaultTintHex = defaults.string(forKey: Key.defaultTintHex.rawValue) ?? NoteTint.yellow.hex
-        tintStrength = defaults.object(forKey: Key.tintStrength.rawValue) as? Double ?? 0.55
-        glassStyle = (defaults.string(forKey: Key.glassStyle.rawValue).flatMap(GlassStyle.init)) ?? .regular
+        defaultTintHex = defaults.string(forKey: Key.defaultTintHex.rawValue) ?? NoteTint.none.hex
+        tintStrength = defaults.object(forKey: Key.tintStrength.rawValue) as? Double ?? 0.22
+        glassStyle = (defaults.string(forKey: Key.glassStyle.rawValue).flatMap(GlassStyle.init)) ?? .clear
         interactiveGlass = defaults.object(forKey: Key.interactiveGlass.rawValue) as? Bool ?? true
         windowOpacity = defaults.object(forKey: Key.windowOpacity.rawValue) as? Double ?? 1.0
+        inactiveOpacity = defaults.object(forKey: Key.inactiveOpacity.rawValue) as? Double ?? 0.30
         floatLevel = (defaults.string(forKey: Key.floatLevel.rawValue).flatMap(FloatLevel.init)) ?? .floating
         fontName = defaults.string(forKey: Key.fontName.rawValue) ?? TextStyle.systemFontSentinel
         fontSize = defaults.object(forKey: Key.fontSize.rawValue) as? Double ?? 14
@@ -95,11 +98,12 @@ final class AppSettings {
     }
 
     func resetToDefaults() {
-        defaultTintHex = NoteTint.yellow.hex
-        tintStrength = 0.55
-        glassStyle = .regular
+        defaultTintHex = NoteTint.none.hex
+        tintStrength = 0.22
+        glassStyle = .clear
         interactiveGlass = true
         windowOpacity = 1.0
+        inactiveOpacity = 0.30
         floatLevel = .floating
         fontName = TextStyle.systemFontSentinel
         fontSize = 14
@@ -109,7 +113,7 @@ final class AppSettings {
     // MARK: - Storage
 
     private enum Key: String {
-        case defaultTintHex, tintStrength, glassStyle, interactiveGlass, windowOpacity
+        case defaultTintHex, tintStrength, glassStyle, interactiveGlass, windowOpacity, inactiveOpacity
         case floatLevel, fontName, fontSize, hotKey, hasCompletedFirstRun
     }
 
