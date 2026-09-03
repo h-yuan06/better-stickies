@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 import SwiftUI
 
 /// Owns one note's window and keeps its frame in sync with the store.
@@ -123,7 +124,19 @@ final class NoteWindowController: NSObject, NSWindowDelegate {
             width: Note.minimumSize.width,
             height: collapsed ? Note.collapsedHeight : Note.minimumSize.height
         )
-        window.setFrame(frame, display: true, animate: animate)
+        // setFrame(_:display:animate:) is AppKit's old blocking animation and visibly
+        // steps rather than glides, which reads as the top edge jumping. The animator
+        // proxy interpolates smoothly and lets the SwiftUI content resize with it.
+        guard animate else {
+            window.setFrame(frame, display: true)
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            context.allowsImplicitAnimation = true
+            window.animator().setFrame(frame, display: true)
+        }
     }
 
     // MARK: - NSWindowDelegate

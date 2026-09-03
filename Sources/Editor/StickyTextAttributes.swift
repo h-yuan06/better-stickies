@@ -22,7 +22,9 @@ nonisolated enum ListMetrics {
     static let markerGutter: CGFloat = 18
     /// Inset between the text container edge and body text.
     static let textInsetX: CGFloat = 14
-    static let textInsetY: CGFloat = 10
+    // Small: the drag strip above already provides the breathing room, and a
+    // second inset on top of it reads as an unexplained empty line.
+    static let textInsetY: CGFloat = 2
     /// Deeper than this and the text has no room left.
     static let maximumLevel = 5
 

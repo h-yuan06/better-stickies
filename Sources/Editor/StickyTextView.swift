@@ -160,6 +160,15 @@ final class StickyTextView: NSTextView, NSTextLayoutManagerDelegate {
         return true
     }
 
+    /// Markdown-style list shorthand is evaluated after each space, which is the only
+    /// character that can complete a trigger.
+    override func insertText(_ string: Any, replacementRange: NSRange) {
+        super.insertText(string, replacementRange: replacementRange)
+        let typed = (string as? String) ?? (string as? NSAttributedString)?.string
+        guard typed == " " else { return }
+        ListEngine.applyAutoListTrigger(in: self, style: textStyle)
+    }
+
     // MARK: - Mouse
 
     override func mouseDown(with event: NSEvent) {

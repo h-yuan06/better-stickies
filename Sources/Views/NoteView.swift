@@ -27,7 +27,7 @@ struct NoteView: View {
                 RichTextEditor(
                     controller: controller,
                     document: note?.document ?? .empty,
-                    style: settings.textStyle,
+                    style: settings.textStyle.tinted(by: effectiveTintHex),
                     onEdit: { document in
                         store.update(noteID) { $0.document = document }
                     }
@@ -41,14 +41,8 @@ struct NoteView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .glassEffect(glass, in: .rect(cornerRadius: Self.cornerRadius))
-        .clipShape(.rect(cornerRadius: Self.cornerRadius))
-        // A hairline edge is what makes a pane of glass legible against a busy
-        // desktop once the tint is this light.
-        .overlay(
-            RoundedRectangle(cornerRadius: Self.cornerRadius)
-                .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
-        )
+        .glassEffect(glass, in: .rect(cornerRadius: cornerRadius))
+        .clipShape(.rect(cornerRadius: cornerRadius))
         .onHover { hovering in
             isHovering = hovering
             onHoverChange(hovering)
@@ -89,7 +83,21 @@ struct NoteView: View {
         .frame(height: Note.collapsedHeight)
     }
 
-    static let cornerRadius: CGFloat = 18
+    static let expandedCornerRadius: CGFloat = 18
+
+    /// A radius larger than half the height cannot round anything; the corners
+    /// collapse into points. A rolled-up note is only 22pt tall, so the radius has to
+    /// come down with it.
+    private var cornerRadius: CGFloat {
+        isCollapsed
+            ? min(Self.expandedCornerRadius, Note.collapsedHeight / 2)
+            : Self.expandedCornerRadius
+    }
+
+    private var effectiveTintHex: String? {
+        let hex = note?.tintHex ?? settings.defaultTintHex
+        return hex == NoteTint.noneHex ? nil : hex
+    }
 
     /// The tint the user picked, per note if set, otherwise the global default.
     /// `nil` is a real choice here — plain, colourless glass.

@@ -266,3 +266,88 @@ struct ListEngineTests {
             .compactMap { storage.attribute(.stickyListNumber, at: $0.location, effectiveRange: nil) as? Int }
     }
 }
+
+@Suite("Markdown list shorthand")
+@MainActor
+struct ListTriggerTests {
+    private let style = TextStyle.default
+
+    @Test("Recognised prefixes", arguments: [
+        ("- ", ListKind.bullet, false),
+        ("* ", ListKind.bullet, false),
+        ("+ ", ListKind.bullet, false),
+        ("1. ", ListKind.numbered, false),
+        ("7) ", ListKind.numbered, false),
+        ("42. ", ListKind.numbered, false),
+        ("[] ", ListKind.checklist, false),
+        ("[ ] ", ListKind.checklist, false),
+        ("[x] ", ListKind.checklist, true),
+        ("[X] ", ListKind.checklist, true),
+    ])
+    func matchesTriggers(prefix: String, kind: ListKind, checked: Bool) {
+        let result = ListEngine.ListTrigger.match(prefix)
+        #expect(result?.kind == kind)
+        #expect(result?.checked == checked)
+    }
+
+    @Test("Text that merely looks like a trigger is left alone", arguments: [
+        "-", "1.", "1.x ", "a. ", " - ", "word ", "", "[y] ", "-- ",
+    ])
+    func ignoresNonTriggers(prefix: String) {
+        #expect(ListEngine.ListTrigger.match(prefix) == nil)
+    }
+
+    private func typing(_ text: String) -> StickyTextView {
+        let textView = StickyTextView.make(style: style)
+        textView.load(.empty)
+        for character in text {
+            textView.insertText(String(character), replacementRange: textView.selectedRange())
+        }
+        return textView
+    }
+
+    @Test("Typing \"1. \" starts a numbered list and consumes the shorthand")
+    func typingOrderedShorthand() {
+        let textView = typing("1. milk")
+        let paragraph = textView.currentDocument().paragraphs[0]
+
+        #expect(paragraph.list == .numbered)
+        #expect(paragraph.text == "milk")
+    }
+
+    @Test("Typing \"- \" starts a bulleted list")
+    func typingBulletShorthand() {
+        let paragraph = typing("- eggs").currentDocument().paragraphs[0]
+        #expect(paragraph.list == .bullet)
+        #expect(paragraph.text == "eggs")
+    }
+
+    @Test("Typing \"[x] \" starts a checklist already ticked")
+    func typingCheckedShorthand() {
+        let paragraph = typing("[x] done").currentDocument().paragraphs[0]
+        #expect(paragraph.list == .checklist)
+        #expect(paragraph.checked)
+        #expect(paragraph.text == "done")
+    }
+
+    @Test("A space later in the line does not retrigger")
+    func doesNotTriggerMidLine() {
+        let paragraph = typing("call me at 1. 30").currentDocument().paragraphs[0]
+        #expect(paragraph.list == nil)
+        #expect(paragraph.text == "call me at 1. 30")
+    }
+
+    @Test("Shorthand inside an existing list item is typed literally")
+    func doesNotRewriteExistingListItem() {
+        let textView = StickyTextView.make(style: style)
+        textView.load(.empty)
+        ListEngine.toggle(.bullet, in: textView, style: style)
+        for character in "1. nested" {
+            textView.insertText(String(character), replacementRange: textView.selectedRange())
+        }
+
+        let paragraph = textView.currentDocument().paragraphs[0]
+        #expect(paragraph.list == .bullet)
+        #expect(paragraph.text == "1. nested")
+    }
+}

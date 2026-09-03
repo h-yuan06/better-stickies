@@ -29,14 +29,23 @@ enum ListEngine {
     }
 
     /// Sets (or clears, with nil) the list kind across the selection.
-    static func apply(_ kind: ListKind?, in textView: NSTextView, style: TextStyle) {
+    ///
+    /// `checked` matters for a paragraph that is still empty — it has no characters to
+    /// carry attributes, so its state lives in `typingAttributes` until something is
+    /// typed. That is exactly the situation `[x] ` shorthand creates.
+    static func apply(
+        _ kind: ListKind?,
+        checked: Bool = false,
+        in textView: NSTextView,
+        style: TextStyle
+    ) {
         guard let storage = textView.textStorage else { return }
         let selection = textView.selectedRange()
 
         withUndo(textView, actionName: kind == nil ? "Remove List" : "Change List") {
             for range in storage.paragraphRanges(intersecting: selection) {
                 let level = range.length > 0 ? storage.listLevel(at: range.location) : 0
-                applyStructure(kind: kind, level: level, checked: false,
+                applyStructure(kind: kind, level: level, checked: checked,
                                to: range, in: textView, style: style)
             }
         }
@@ -175,6 +184,69 @@ enum ListEngine {
         }
     }
 
+    // MARK: - Automatic lists
+
+    /// Markdown-style shorthand: typing `- `, `* `, `1. `, `1) `, `[] ` or `[x] ` at
+    /// the start of a plain paragraph turns it into the corresponding list and removes
+    /// the characters that triggered it.
+    ///
+    /// Returns false when nothing matched, which is the common case on every space.
+    @discardableResult
+    static func applyAutoListTrigger(in textView: NSTextView, style: TextStyle) -> Bool {
+        guard let storage = textView.textStorage else { return false }
+        let selection = textView.selectedRange()
+        guard selection.length == 0 else { return false }
+
+        let paragraph = storage.paragraphRange(at: selection.location)
+        guard paragraph.length > 0 else { return false }
+        // Only ever promotes plain text; it must not rewrite an existing list item.
+        guard storage.listKind(at: paragraph.location) == nil else { return false }
+
+        let content = storage.contentRange(ofParagraph: paragraph)
+        guard selection.location > content.location else { return false }
+
+        let prefixRange = NSRange(
+            location: content.location,
+            length: selection.location - content.location
+        )
+        let prefix = (storage.string as NSString).substring(with: prefixRange)
+        guard let trigger = ListTrigger.match(prefix) else { return false }
+
+        guard textView.shouldChangeText(in: prefixRange, replacementString: "") else { return false }
+        storage.replaceCharacters(in: prefixRange, with: "")
+        textView.didChangeText()
+        textView.setSelectedRange(NSRange(location: content.location, length: 0))
+
+        apply(trigger.kind, checked: trigger.checked, in: textView, style: style)
+        return true
+    }
+
+    /// The shorthand vocabulary, kept separate so it is testable on its own.
+    nonisolated enum ListTrigger {
+        static func match(_ prefix: String) -> (kind: ListKind, checked: Bool)? {
+            switch prefix {
+            case "- ", "* ", "+ ":
+                return (.bullet, false)
+            case "[] ", "[ ] ":
+                return (.checklist, false)
+            case "[x] ", "[X] ":
+                return (.checklist, true)
+            default:
+                return matchOrdered(prefix)
+            }
+        }
+
+        /// `12. ` or `12) ` — any run of digits, so resuming a long list works.
+        private static func matchOrdered(_ prefix: String) -> (kind: ListKind, checked: Bool)? {
+            guard prefix.hasSuffix(" ") else { return nil }
+            let body = prefix.dropLast()
+            guard let last = body.last, last == "." || last == ")" else { return nil }
+            let digits = body.dropLast()
+            guard !digits.isEmpty, digits.allSatisfy(\.isNumber) else { return nil }
+            return (.numbered, false)
+        }
+    }
+
     // MARK: - Numbering
 
     /// Recomputes the display number of every ordered item.
@@ -232,6 +304,13 @@ enum ListEngine {
                     range: subrange
                 )
             }
+            // Body text tracks the note's tint, so retinting a note retints its text.
+            let isCompleted = kind == .checklist && storage.isChecked(at: range.location)
+            storage.addAttribute(
+                .foregroundColor,
+                value: isCompleted ? style.completedTextColor : style.textColor,
+                range: range
+            )
         }
         storage.endEditing()
         renumber(textView)

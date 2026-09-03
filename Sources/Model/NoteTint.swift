@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// A glass tint. Stored as a hex string so a user's custom colour is exactly as
@@ -19,6 +20,10 @@ nonisolated struct NoteTint: Codable, Hashable, Sendable, Identifiable {
     }
 
     static let none = NoteTint(hex: NoteTint.noneHex, name: "None")
+    /// The default. An untinted pane picks up whatever is behind it and reads white
+    /// and cloudy over bright content; a neutral dark tint adds no hue but gives the
+    /// glass something to be, which is what makes it look like glass rather than fog.
+    static let smoke = NoteTint(hex: "#2C2C2E", name: "Smoke")
     static let yellow = NoteTint(hex: "#FFD60A", name: "Yellow")
     static let peach = NoteTint(hex: "#FF9F0A", name: "Peach")
     static let pink = NoteTint(hex: "#FF375F", name: "Pink")
@@ -28,13 +33,27 @@ nonisolated struct NoteTint: Codable, Hashable, Sendable, Identifiable {
     static let green = NoteTint(hex: "#30D158", name: "Green")
     static let graphite = NoteTint(hex: "#8E8E93", name: "Graphite")
 
-    /// Colourless first: the default is plain glass, with colour as an opt-in.
+    /// Neutral first: the default is uncoloured glass, with hue as an opt-in.
     static let palette: [NoteTint] = [
-        .none, .yellow, .peach, .pink, .purple, .blue, .teal, .green, .graphite,
+        .smoke, .none, .yellow, .peach, .pink, .purple, .blue, .teal, .green, .graphite,
     ]
 
     /// Colour to show in a swatch, since `.none` has no colour of its own.
     var swatchColor: Color { color ?? Color.white.opacity(0.22) }
+
+    /// Text colour for a note carrying this tint: low contrast, and pulled toward the
+    /// tint's own hue so the writing belongs to the pane instead of sitting on it.
+    var textColor: NSColor {
+        guard let tint = color, let tintColor = NSColor(tint).usingColorSpace(.sRGB) else {
+            return .secondaryLabelColor
+        }
+        return NSColor(name: nil) { appearance in
+            let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+            let base: NSColor = isDark ? .white : .black
+            let blended = base.blended(withFraction: 0.45, of: tintColor) ?? base
+            return blended.withAlphaComponent(isDark ? 0.74 : 0.68)
+        }
+    }
 }
 
 nonisolated extension Color {

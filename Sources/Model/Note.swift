@@ -43,7 +43,7 @@ nonisolated struct Note: Codable, Identifiable, Equatable, Sendable {
     static let minimumSize = CGSize(width: 200, height: 140)
     /// Height of the drag strip along the top, and of a rolled-up note. Kept slim
     /// because the strip carries no chrome of its own until hovered.
-    static let collapsedHeight: CGFloat = 26
+    static let collapsedHeight: CGFloat = 22
 
     /// Title shown in the menu bar list.
     var displayTitle: String {

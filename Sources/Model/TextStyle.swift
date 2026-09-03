@@ -7,6 +7,8 @@ nonisolated struct TextStyle: Equatable, Sendable {
     var fontSize: CGFloat
     var lineSpacing: CGFloat
     var paragraphSpacing: CGFloat
+    /// The note's tint, so body text can be pulled toward it. Nil means plain grey.
+    var tintHex: String?
 
     static let `default` = TextStyle(
         fontName: systemFontSentinel,
@@ -19,11 +21,21 @@ nonisolated struct TextStyle: Equatable, Sendable {
     /// system rather than pinning a font name that may not exist on another Mac.
     static let systemFontSentinel = "__system__"
 
-    /// Deliberately secondary rather than full-contrast label: on a nearly clear
-    /// glass panel, solid black text reads as pasted on rather than part of it.
-    var textColor: NSColor { .secondaryLabelColor }
+    /// Deliberately low-contrast: on a nearly clear glass panel, full-strength label
+    /// colour reads as pasted on rather than as part of the surface.
+    var textColor: NSColor {
+        guard let tintHex else { return .secondaryLabelColor }
+        return NoteTint(hex: tintHex, name: "").textColor
+    }
+
     /// Completed checklist items are de-emphasised rather than hidden.
     var completedTextColor: NSColor { .tertiaryLabelColor }
+
+    func tinted(by hex: String?) -> TextStyle {
+        var copy = self
+        copy.tintHex = hex
+        return copy
+    }
 
     func font(bold: Bool, italic: Bool) -> NSFont {
         let base: NSFont = fontName == Self.systemFontSentinel
