@@ -20,18 +20,14 @@ nonisolated struct NoteTint: Codable, Hashable, Sendable, Identifiable {
     }
 
     static let none = NoteTint(hex: NoteTint.noneHex, name: "None")
-    static let yellow = NoteTint(hex: "#FFD60A", name: "Yellow")
-    static let peach = NoteTint(hex: "#FF9F0A", name: "Peach")
-    static let pink = NoteTint(hex: "#FF375F", name: "Pink")
-    static let purple = NoteTint(hex: "#BF5AF2", name: "Purple")
-    static let blue = NoteTint(hex: "#0A84FF", name: "Blue")
-    static let teal = NoteTint(hex: "#40C8E0", name: "Teal")
-    static let green = NoteTint(hex: "#30D158", name: "Green")
-    static let graphite = NoteTint(hex: "#8E8E93", name: "Graphite")
+    static let sage = NoteTint(hex: "#CDD5C6", name: "Sage")
+    static let linen = NoteTint(hex: "#FBF2ED", name: "Linen")
+    static let mist = NoteTint(hex: "#CECED7", name: "Mist")
+    static let clay = NoteTint(hex: "#E8D4C6", name: "Clay")
+    static let sky = NoteTint(hex: "#CDEFFE", name: "Sky")
 
-    /// Colourless first: the default is plain glass, with colour as an opt-in.
     static let palette: [NoteTint] = [
-        .none, .yellow, .peach, .pink, .purple, .blue, .teal, .green, .graphite,
+        .none, .sage, .linen, .mist, .clay, .sky,
     ]
 
     /// Colour to show in a swatch, since `.none` has no colour of its own.

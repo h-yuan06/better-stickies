@@ -80,7 +80,7 @@ struct TintPicker: View {
     let store: NoteStore
     let settings: AppSettings
 
-    private let columns = Array(repeating: GridItem(.fixed(24), spacing: 6), count: 5)
+    private let columns = Array(repeating: GridItem(.fixed(24), spacing: 6), count: 6)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

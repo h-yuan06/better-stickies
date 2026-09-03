@@ -49,7 +49,7 @@ private struct AppearanceSettings: View {
                         ColorPicker(
                             "",
                             selection: Binding(
-                                get: { Color(hex: settings.defaultTintHex) ?? .yellow },
+                                get: { Color(hex: settings.defaultTintHex) ?? NoteTint.sage.swatchColor },
                                 set: { settings.defaultTintHex = $0.hexString }
                             )
                         )
