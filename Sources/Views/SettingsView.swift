@@ -13,8 +13,10 @@ struct SettingsView: View {
             UpdateSettings(environment: environment)
                 .tabItem { Label("Updates", systemImage: "arrow.down.circle") }
         }
-        .frame(width: 460)
-        .scenePadding()
+        // Both dimensions, explicitly. A TabView wrapping grouped Forms reports no
+        // intrinsic height, so a width-only frame collapses the hosting window to a
+        // 1pt sliver — present, focused, and invisible.
+        .frame(width: 480, height: 520)
     }
 }
 

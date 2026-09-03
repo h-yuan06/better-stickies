@@ -12,9 +12,5 @@ struct BetterStickiesApp: App {
         } label: {
             Image(systemName: "note.text")
         }
-
-        Settings {
-            SettingsView(environment: environment)
-        }
     }
 }

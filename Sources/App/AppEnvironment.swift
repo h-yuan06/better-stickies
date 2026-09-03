@@ -11,6 +11,7 @@ final class AppEnvironment {
     let store: NoteStore
     let windowManager: WindowManager
     let updater: UpdaterController
+    let settingsWindow = SettingsWindowController()
 
     private init() {
         let settings = AppSettings.shared
@@ -42,8 +43,6 @@ final class AppEnvironment {
     }
 
     func openSettings() {
-        NSApp.activate(ignoringOtherApps: true)
-        // The SwiftUI Settings scene responds to the standard selector.
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        settingsWindow.show(environment: self)
     }
 }

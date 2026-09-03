@@ -34,7 +34,7 @@ struct MenuBarContent: View {
 
         Divider()
 
-        SettingsLink { Text("Settings…") }
+        Button("Settings…") { environment.openSettings() }
             .keyboardShortcut(",", modifiers: .command)
 
         if environment.updater.isConfigured {
