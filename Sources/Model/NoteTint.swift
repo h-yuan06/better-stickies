@@ -20,10 +20,6 @@ nonisolated struct NoteTint: Codable, Hashable, Sendable, Identifiable {
     }
 
     static let none = NoteTint(hex: NoteTint.noneHex, name: "None")
-    /// The default. An untinted pane picks up whatever is behind it and reads white
-    /// and cloudy over bright content; a neutral dark tint adds no hue but gives the
-    /// glass something to be, which is what makes it look like glass rather than fog.
-    static let smoke = NoteTint(hex: "#2C2C2E", name: "Smoke")
     static let yellow = NoteTint(hex: "#FFD60A", name: "Yellow")
     static let peach = NoteTint(hex: "#FF9F0A", name: "Peach")
     static let pink = NoteTint(hex: "#FF375F", name: "Pink")
@@ -33,9 +29,9 @@ nonisolated struct NoteTint: Codable, Hashable, Sendable, Identifiable {
     static let green = NoteTint(hex: "#30D158", name: "Green")
     static let graphite = NoteTint(hex: "#8E8E93", name: "Graphite")
 
-    /// Neutral first: the default is uncoloured glass, with hue as an opt-in.
+    /// Colourless first: the default is plain glass, with colour as an opt-in.
     static let palette: [NoteTint] = [
-        .smoke, .none, .yellow, .peach, .pink, .purple, .blue, .teal, .green, .graphite,
+        .none, .yellow, .peach, .pink, .purple, .blue, .teal, .green, .graphite,
     ]
 
     /// Colour to show in a swatch, since `.none` has no colour of its own.

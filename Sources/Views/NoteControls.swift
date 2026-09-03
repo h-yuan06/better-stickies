@@ -29,7 +29,7 @@ struct NoteControls: View {
                     .fill(currentTint.swatchColor)
                     .overlay(Circle().strokeBorder(.white.opacity(0.35), lineWidth: 0.5))
                     .frame(width: 9, height: 9)
-                    .frame(width: 20, height: 20)
+                    .frame(width: 18, height: 18)
                     .contentShape(.rect)
             }
             .buttonStyle(.plain)
@@ -64,7 +64,7 @@ struct NoteControls: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 9, weight: .medium))
-                .frame(width: 20, height: 20)
+                .frame(width: 18, height: 18)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -93,7 +93,7 @@ struct TintPicker: View {
                     } label: {
                         Circle()
                             .fill(tint.swatchColor)
-                            .frame(width: 20, height: 20)
+                            .frame(width: 18, height: 18)
                             .overlay(
                                 Circle().strokeBorder(
                                     isSelected(tint) ? Color.primary : Color.white.opacity(0.35),

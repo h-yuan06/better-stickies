@@ -40,8 +40,14 @@ struct NoteView: View {
                     .animation(.easeOut(duration: 0.18), value: isHovering)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Top alignment, not the default centre: if SwiftUI is ever proposed more
+        // height than the window actually has — which happens for a frame or two
+        // while a collapse animates — centred content hangs below the bottom edge
+        // and is clipped. Pinned to the top it simply overflows downward, invisibly.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .glassEffect(glass, in: .rect(cornerRadius: cornerRadius))
+        // Clip before the shape so that a mid-animation size disagreement is hidden
+        // rather than drawn outside the glass.
         .clipShape(.rect(cornerRadius: cornerRadius))
         .onHover { hovering in
             isHovering = hovering
@@ -58,7 +64,7 @@ struct NoteView: View {
             if isCollapsed {
                 HStack {
                     Text(note?.displayTitle ?? "")
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .foregroundStyle(.secondary)

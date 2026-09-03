@@ -15,10 +15,13 @@ final class NoteWindow: NSPanel {
     init(contentRect: NSRect) {
         super.init(
             contentRect: contentRect,
-            // Titled + fullSizeContentView rather than .borderless: a borderless window
-            // cannot be resized by dragging its edges, and we want real resize handles
-            // under our own chrome.
-            styleMask: [.titled, .resizable, .fullSizeContentView, .nonactivatingPanel],
+            // Borderless, not titled. A titled window always reserves 32pt for its
+            // title bar: `contentLayoutRect` is `frame.height - 32` clamped at zero, so
+            // below 32pt the content area vanishes and AppKit lays the note's content
+            // out against zero height, centring and clipping it. A note collapses to
+            // 22pt, so titled is simply not an option. `.resizable` still governs edge
+            // dragging without a title bar.
+            styleMask: [.borderless, .resizable, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -26,12 +29,6 @@ final class NoteWindow: NSPanel {
         isFloatingPanel = true
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
-
-        titleVisibility = .hidden
-        titlebarAppearsTransparent = true
-        standardWindowButton(.closeButton)?.isHidden = true
-        standardWindowButton(.miniaturizeButton)?.isHidden = true
-        standardWindowButton(.zoomButton)?.isHidden = true
 
         isOpaque = false
         backgroundColor = .clear

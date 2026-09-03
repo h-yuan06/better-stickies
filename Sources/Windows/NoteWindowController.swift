@@ -52,7 +52,32 @@ final class NoteWindowController: NSObject, NSWindowDelegate {
         // The glass is the only thing that should paint; anything opaque behind it
         // would show as a hard rectangle outside the rounded shape.
         hosting.layer?.backgroundColor = .clear
-        window.contentView = hosting
+        // Two things have to be true at once, and NSHostingView will not do both on
+        // its own as a contentView:
+        //
+        //  * It must publish no size constraints, or the SwiftUI content's own
+        //    minimum height becomes a floor the window cannot collapse below.
+        //  * Its content must still fill the window rather than being centred in it,
+        //    or a collapsed note lays its strip out off-centre and clips it.
+        //
+        // Clearing sizingOptions gets the first and breaks the second. Pinning the
+        // hosting view to a plain container with explicit constraints gets both: the
+        // container is the resizable contentView, and the constraints force SwiftUI to
+        // lay out at exactly the window's size.
+        hosting.sizingOptions = []
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+
+        let container = NSView()
+        container.wantsLayer = true
+        container.layer?.backgroundColor = .clear
+        container.addSubview(hosting)
+        NSLayoutConstraint.activate([
+            hosting.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            hosting.topAnchor.constraint(equalTo: container.topAnchor),
+            hosting.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        ])
+        window.contentView = container
 
         if note.isCollapsed { applyCollapsed(true, animate: false) }
     }
@@ -124,6 +149,10 @@ final class NoteWindowController: NSObject, NSWindowDelegate {
             width: Note.minimumSize.width,
             height: collapsed ? Note.collapsedHeight : Note.minimumSize.height
         )
+        // Let SwiftUI reach its new layout before the window starts moving, so the
+        // two are never briefly disagreeing about how tall the note is.
+        window.contentView?.layoutSubtreeIfNeeded()
+
         // setFrame(_:display:animate:) is AppKit's old blocking animation and visibly
         // steps rather than glides, which reads as the top edge jumping. The animator
         // proxy interpolates smoothly and lets the SwiftUI content resize with it.
